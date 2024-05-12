@@ -72,6 +72,8 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
      parse DataBlock.
     */
     std::string dep_block_str;
+    uint8_t* begin_block_ptr = nullptr;
+    uint32_t block_size = 0;
     auto parse_token = [&](){
         //get literals length
         get_byteD(token);
@@ -93,6 +95,10 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         dep_block_str+=literals;
         log_parsed(literals);
         //get offset
+        //If is last token, have no offset.
+        if(scan_ptr-begin_block_ptr==block_size){
+            return;
+        }
         get_uInt16D(offset);
         log_parsed(offset);
         assert(offset<=0xFFFF);
@@ -114,14 +120,18 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         log_parsed(dep_token_str);
     };
     while(1){
+        //clear
+        dep_block_str.clear();
+        block_size=0;
         //get BlockSize
         get_uInt32D(block_size_data);
+        begin_block_ptr = scan_ptr;
         if(block_size_data==0x0){
             std::cout<<"INFO: End mark find.\n";
             break;
         }
         uint32_t _split_num = 0x80000000;
-        uint32_t block_size = block_size_data;
+        block_size = block_size_data;
         bool is_compressed = true;
         if(block_size_data>_split_num){
             //uncompressed
@@ -132,7 +142,6 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         log_parsed(is_compressed);
         //ParseData
         DataBlockInfo data_block_info;
-        dep_block_str.clear();
         if(!is_compressed){
             data_block_info.is_compressed = false;
             data_block_info.origin_size=block_size;
@@ -146,25 +155,22 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
             dep_file<<dep_block_str;
         }
         else{
-            //parse tockens.
-            uint32_t now_dep_len = 0;
+            //parse tokens.
             while(1){
-                int begin_sz = parse_stat.data_blocks_size;
                 parse_token();
                 log_parse_ok("One Token");
-                now_dep_len += (uint32_t)(parse_stat.data_blocks_size - begin_sz);
-                if(now_dep_len>=block_size){
-                    break;
-                }
+                if(scan_ptr-begin_block_ptr==block_size)break;
+                //limited scan area, assert if segmetation fault.
+                assert(scan_ptr-begin_block_ptr<=block_size);
             }
         }
         dep_file<< dep_block_str;
-        log_parse_ok("One Block");
         if(testbit_byte(flag, 4)){
             get_uInt32D(block_checksum);
             log_parsed(block_checksum);
         }
-        break;
+        assert(scan_ptr - begin_block_ptr==block_size);
+        log_parse_ok("One Block");
     }
     //Parse CheckSum.
     if(testbit_byte(flag, 2)){
@@ -172,11 +178,9 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         log_parsed(content_check_sum);
     }
     dep_file.close();
-    get_uInt16(extra_bytes);
-    std::cout<<extra_bytes<<"\n";
     assert(scan_ptr-file_data.data_ptr==file_data.size);
     assert(parse_stat.data_blocks_size + parse_stat.frame_size==file_data.size);
-    log_parse_ok("Parse Succeccfully ended.");
+    log_parse_ok("Parse Succeccfully ended");
 }
 
 void Parser::dump_stat(){
@@ -186,8 +190,8 @@ void Parser::dump_stat(){
 }
 
 int main(){
-    const std::string file_name = "lineitem_50X2.csv.lz4";
-    const std::string dep_file_name = "lineitem_50X2.csv.lz4.dep";
+    const std::string file_name = "lineitem_50X9.csv.lz4";
+    const std::string dep_file_name = "lineitem_50X9.csv.lz4.dep";
     Parser parser;
     parser.init(file_name);
     parser.parse_and_decompress(dep_file_name);
