@@ -47,6 +47,7 @@ std::string Parser::restore_data(const std::string& origin_str, uint16_t offset,
 
 //Core Function.
 void Parser::parse_and_decompress(const std::string& dep_file_name){
+    #define ptr file_data.data_ptr
     std::ofstream dep_file = std::ofstream(dep_file_name);
     uint8_t* scan_ptr = ptr;
     //parse Magic Number.

@@ -6,7 +6,6 @@
 #include <cstring>
 
 //define region
-#define ptr file_data.data_ptr
 #define get_byte(var) uint8_t var=*(scan_ptr);++scan_ptr
 #define get_uInt16(var) uint16_t var=*((uint16_t*)(scan_ptr));scan_ptr+=2
 #define get_uInt32(var) uint32_t var=*((uint32_t*)(scan_ptr));scan_ptr+=4
