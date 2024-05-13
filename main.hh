@@ -4,6 +4,7 @@
 #include <vector>
 #include <cassert>
 #include <cstring>
+#include <algorithm>
 
 //define region
 #define get_byte(var) uint8_t var=*(scan_ptr);++scan_ptr
@@ -31,14 +32,16 @@ struct FileData{
     void clear();
 };
 
-struct DataBlockInfo{
+struct TokenInfo{
     bool is_valid;
     bool is_compressed;
     uint64_t actual_size;
     uint64_t origin_size;
     uint64_t ref_offeset;
     uint64_t ref_length;
-    DataBlockInfo();
+    std::string token_str;
+    TokenInfo();
+    bool operator<(const TokenInfo&)const;
 };
 
 class Parser{
@@ -47,12 +50,14 @@ private:
     struct {
         int frame_size;
         int data_blocks_size;
-        std::vector<DataBlockInfo> data_blocks;
+        int block_count;
+        int token_count;
+        std::vector<TokenInfo> token_infos;
     } parse_stat;
     std::string restore_data(const std::string& origin_str, uint16_t offset, int match_length);
 public:
     ~Parser();
     void parse_and_decompress(const std::string& dep_file_name);
     void init(const std::string& file_name);
-    void dump_stat();
+    void dump_stat(const std::string&);
 };  
