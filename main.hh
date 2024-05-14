@@ -54,7 +54,8 @@ private:
         int token_count;
         std::vector<TokenInfo> token_infos;
     } parse_stat;
-    std::string restore_data(const std::string& origin_str, uint16_t offset, int match_length);
+    std::string restore_data(const std::string& , uint16_t , int );
+    std::string restore_data_overlap(const std::string& , uint16_t , int );
 public:
     ~Parser();
     void parse_and_decompress(const std::string& dep_file_name);

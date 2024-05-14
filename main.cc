@@ -37,12 +37,38 @@ TokenInfo::TokenInfo(){
     memset(this, 0, sizeof(TokenInfo));
 }
 
+std::string Parser::restore_data_overlap(const std::string& origin_str, uint16_t offset, int match_length){
+    std::string ret = "";
+    int begin_ptr = origin_str.length() - offset;
+    for(int i = 0; i<match_length; ++i){
+        int ind = begin_ptr + i;
+        const std::string* tar = &origin_str;
+        if(ind >= origin_str.length()){
+            ind -= origin_str.length();
+            tar = &ret;
+        }
+        ret.push_back(tar->at(ind));
+    }
+    return ret;
+}
+
 std::string Parser::restore_data(const std::string& origin_str, uint16_t offset, int match_length){
     //check
     assert(offset<=origin_str.length());
-    assert(match_length<=(origin_str.length()-offset+1));
-    std::string sub_str = origin_str.substr(origin_str.length() - offset, match_length);
-    return sub_str;
+    if(match_length<=offset){
+        std::string sub_str = origin_str.substr(origin_str.length() - offset, match_length);
+        return sub_str;
+    }
+    else{
+        //重叠匹配
+        // -------Testing overlap------
+        // std::string test_str = "1";
+        // assert(restore_data_overlap(test_str, 1, 8)=="11111111");
+        // test_str = "124";
+        // assert(restore_data_overlap(test_str, 2, 4)=="2424");
+        // -------Testing overlap End------
+        return restore_data_overlap(origin_str, offset, match_length);
+    }
 }
 
 //Core Function.
@@ -230,19 +256,21 @@ void Parser::dump_stat(const std::string& dump_token_file_name){
     std::cout<<"Stat:"<<"total_token_sz is " << total_token_sz <<".\n";
     std::cout<<"Stat: [OK] Check TokenInfos.\n";
     //dump token_infos.
-    sort(parse_stat.token_infos.begin(), parse_stat.token_infos.end());
+    // sort(parse_stat.token_infos.begin(), parse_stat.token_infos.end());
     std::ofstream dump_token_file = std::ofstream(dump_token_file_name);
     int token_cnt = 0;
     for(auto& token:parse_stat.token_infos){
-        // dump_token_file<<"$Token"<<token_cnt++<<": ";
-        dump_token_file<<token.token_str<<"\n";
+        dump_token_file<<"$Token"<<token_cnt++<<": ";
+        dump_token_file<<token.token_str.substr(0,token.token_str.length()-token.ref_length);
+        dump_token_file<<"@";
+        dump_token_file<<token.token_str.substr(token.token_str.length()-token.ref_length,token.ref_length)<<"\n";
     }
     std::cout<<"Stat: [OK] Dump sorted token infos into file: "<< dump_token_file_name << " .\n";
     dump_token_file.close();
 }
 
 int main(){
-    const std::string file_name = "lineitem_50X2.csv.lz4";
+    const std::string file_name = "lineitem.csv.lz4";
     const std::string dep_file_name = file_name+".dep";
     const std::string dump_token_file_name=file_name+".tokens";
     Parser parser;
