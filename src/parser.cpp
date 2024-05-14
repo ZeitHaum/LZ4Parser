@@ -1,4 +1,3 @@
-#pragma once
 #include "parser.h"
 
 void FileData::clear(){
@@ -30,7 +29,7 @@ void Parser::init(const std::string& file_name){
 }
 
 SequenceInfo::SequenceInfo(){
-    memset(this, 0, sizeof(SequenceInfo));
+    is_valid = false;
 }
 
 std::string Parser::restore_data_overlap(const std::string& origin_str, uint16_t offset, int match_length){
@@ -65,6 +64,10 @@ std::string Parser::restore_data(const std::string& origin_str, uint16_t offset,
         // -------Testing overlap End------
         return restore_data_overlap(origin_str, offset, match_length);
     }
+}
+
+Reference::Reference(){
+    valid=false;
 }
 
 //Core Function.
@@ -136,9 +139,11 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         //get match lenghth.
         uint8_t prev_match_length = get_low_nibble(token);
         int total_match_length = (int)(prev_match_length);
+        uint32_t ref_bitsize = 20;
         if(prev_match_length==0x0F){
             while(1){
                 get_byteD(tmp_byte);
+                ref_bitsize+=8;
                 total_match_length+=(int)tmp_byte;
                 if(tmp_byte<0xFF) break;
             }
@@ -153,9 +158,12 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         sequence_info.is_compressed=true;
         sequence_info.origin_size=dep_sequence_str.length();
         sequence_info.is_valid=true;
-        sequence_info.ref_length=total_match_length;
-        sequence_info.ref_offeset=offset;
-        sequence_info.sequence_str=dep_sequence_str;
+        sequence_info.ref.valid=true;
+        sequence_info.ref.length=total_match_length;
+        sequence_info.ref.offset=offset;
+        sequence_info.ref.str=comp_str;
+        sequence_info.ref.bitsize=ref_bitsize;
+        sequence_info.sequence_str=literals;
         parse_stat.sequence_infos.push_back(sequence_info);
         log_parsed(dep_sequence_str);
     };
@@ -256,10 +264,12 @@ void Parser::dump_stat(const std::string& dump_sequence_file_name){
     std::ofstream dump_sequence_file = std::ofstream(dump_sequence_file_name);
     int sequence_cnt = 0;
     for(auto& sequence:parse_stat.sequence_infos){
-        dump_sequence_file<<"$sequence"<<sequence_cnt++<<": ";
-        dump_sequence_file<<sequence.sequence_str.substr(0,sequence.sequence_str.length()-sequence.ref_length);
-        dump_sequence_file<<"@";
-        dump_sequence_file<<sequence.sequence_str.substr(sequence.sequence_str.length()-sequence.ref_length,sequence.ref_length)<<"\n";
+        dump_sequence_file<<sequence.sequence_str;
+        if(sequence.ref.valid){
+            dump_sequence_file<<"<span style=\"color:red;\">";
+            dump_sequence_file<<sequence.ref.str;
+            dump_sequence_file<<"</span>";
+        }
     }
     std::cout<<"Stat: [OK] Dump sorted sequence infos into file: "<< dump_sequence_file_name << " .\n";
     dump_sequence_file.close();

@@ -1,4 +1,3 @@
-#pragma once
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -33,13 +32,21 @@ struct FileData{
     void clear();
 };
 
+struct Reference{
+    uint32_t offset;
+    uint32_t length;
+    std::string str;
+    uint32_t bitsize;
+    bool valid;
+    Reference();
+};
+
 struct SequenceInfo{
     bool is_valid;
     bool is_compressed;
     uint64_t actual_size;
     uint64_t origin_size;
-    uint64_t ref_offeset;
-    uint64_t ref_length;
+    Reference ref;
     std::string sequence_str;
     SequenceInfo();
     bool operator<(const SequenceInfo&)const;
