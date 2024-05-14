@@ -1,2 +1,2 @@
 ./build.sh
-./main
+./build/main

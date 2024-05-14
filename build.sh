@@ -1,1 +1,3 @@
-g++ -g -o main main.cc main.hh
+cd build;
+cmake ..;
+make;

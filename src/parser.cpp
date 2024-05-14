@@ -1,4 +1,5 @@
-#include "main.hh"
+#pragma once
+#include "parser.h"
 
 void FileData::clear(){
     delete[] data_ptr;
@@ -14,12 +15,7 @@ Parser::~Parser(){
 void Parser::init(const std::string& file_name){
     // 打开文件流
     std::ifstream file_stream(file_name, std::ios::binary);
-    if (!file_stream.is_open()) {
-        std::cerr << "Error: Failed to open file " << file_name << std::endl;
-        file_data.data_ptr = nullptr;
-        file_data.size = 0;
-        file_data.valid = false;
-    }
+    assert(file_stream.is_open());
     // 获取文件大小
     file_stream.seekg(0, std::ios::end);
     file_data.size = file_stream.tellg();
@@ -267,15 +263,4 @@ void Parser::dump_stat(const std::string& dump_sequence_file_name){
     }
     std::cout<<"Stat: [OK] Dump sorted sequence infos into file: "<< dump_sequence_file_name << " .\n";
     dump_sequence_file.close();
-}
-
-int main(){
-    const std::string file_name = "lineitem_50X2.csv.lz4";
-    const std::string dep_file_name = file_name+".dep";
-    const std::string dump_sequence_file_name=file_name+".sequences";
-    Parser parser;
-    parser.init(file_name);
-    parser.parse_and_decompress(dep_file_name);
-    parser.dump_stat(dump_sequence_file_name);
-    return 0;
 }
