@@ -106,20 +106,30 @@ void sign_matched_line(LineInfo& line1, LineInfo& line2){
 }
 
 void diff_reference(std::vector<SequenceInfo>* refs1, std::vector<SequenceInfo>*refs2){
-    std::vector<LineInfo> line_infos1;
-    std::vector<LineInfo> line_infos2;
-    get_line_infos(refs1, line_infos1);
-    get_line_infos(refs2, line_infos2);
-
-    /*** test get_line_info ***/
-    TEST_get_line_info("../test/lineitem_50X2.csv")
-
-    for(int i = 0; i<line_infos1.size(); ++i){
-        for(int j = 0; j<line_infos2.size(); ++j){
-            if(line_infos1[i].str == line_infos2[j].str){
-                //Match
-                sign_matched_line(line_infos1[i], line_infos2[j]);
-                break;
+    std::map<SequenceInfo, int> seq_mp;
+    for(auto& seq:(*refs1)){
+        if(seq_mp.find(seq)==seq_mp.end()){
+            seq_mp[seq] = 1;
+        }
+        else{
+            seq_mp[seq]++;
+        }
+    }
+    for(auto& seq:(*refs2)){
+        if(seq_mp.find(seq)==seq_mp.end()){
+            seq.ref.is_diff = true;
+        }
+        else{
+            if((--seq_mp[seq])==0){
+                seq_mp.erase(seq);
+            }
+        }
+    }
+    for(auto& seq:(*refs1)){
+        if(seq_mp.find(seq)!=seq_mp.end()){
+            seq.ref.is_diff = true;
+            if((--seq_mp[seq])==0){
+                seq_mp.erase(seq);
             }
         }
     }
@@ -131,6 +141,8 @@ int main(){
     Parser* parser_low = parse_file(lowcomp_file_name);
     Parser* parser_high = parse_file(highcomp_file_name);
     diff_reference(parser_low->get_seqinfo_ptr(), parser_high->get_seqinfo_ptr());
+    std::cout<<"Diff: space of parser_low is "<< parser_low->get_diff_size() *1.0F/8.0F<< "Bytes. \n"; 
+    std::cout<<"Diff: space of parser_high is "<< parser_high->get_diff_size() *1.0F/8.0F<<"Bytes. \n"; 
     parser_low->dump_stat();
     parser_high->dump_stat();
     delete parser_low;

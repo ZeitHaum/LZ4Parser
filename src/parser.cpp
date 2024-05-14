@@ -254,7 +254,7 @@ void Parser::parse_and_decompress(){
 }
 
 bool SequenceInfo::operator<(const SequenceInfo& other)const{
-    return sequence_str<other.sequence_str;
+    return ref.str<other.ref.str;
 }
 
 int Parser::get_diff_size(){

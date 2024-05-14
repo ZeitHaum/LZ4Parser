@@ -1,2 +1,3 @@
-sort lineitem_2Neg.csv.lz4.tokens >lineitem_2Neg.csv.lz4.tokens.sort
-sort lineitem_2Pos.csv.lz4.tokens >lineitem_2Pos.csv.lz4.tokens.sort
+cd test
+sort lineitem_50X2.csv.lz4.dump.md > lineitem_50X2.csv.lz4.dump.md.sort
+sort lineitem_50X10.csv.lz4.dump.md > lineitem_50X10.csv.lz4.dump.md.sort
