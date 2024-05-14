@@ -11,6 +11,14 @@ Parser::~Parser(){
     file_data.clear();
 }
 
+Parser::Parser(){
+    
+}
+
+std::vector<SequenceInfo>* Parser::get_seqinfo_ptr(){
+    return &parse_stat.sequence_infos;
+}
+
 void Parser::init(const std::string& file_name){
     // 打开文件流
     std::ifstream file_stream(file_name, std::ios::binary);
@@ -26,6 +34,7 @@ void Parser::init(const std::string& file_name){
     file_stream.close();
     file_data.valid = true;
     std::cout<<"INFO:" << "init input files, read data Bytes:" << file_data.size << "\n";
+    this->file_name = file_name;
 }
 
 SequenceInfo::SequenceInfo(){
@@ -68,11 +77,13 @@ std::string Parser::restore_data(const std::string& origin_str, uint16_t offset,
 
 Reference::Reference(){
     valid=false;
+    is_diff=false;
 }
 
 //Core Function.
-void Parser::parse_and_decompress(const std::string& dep_file_name){
+void Parser::parse_and_decompress(){
     #define ptr file_data.data_ptr
+    const std::string dep_file_name = file_name+".dep";
     std::ofstream dep_file = std::ofstream(dep_file_name);
     uint8_t* scan_ptr = ptr;
     //parse Magic Number.
@@ -244,7 +255,8 @@ bool SequenceInfo::operator<(const SequenceInfo& other)const{
     return sequence_str<other.sequence_str;
 }
 
-void Parser::dump_stat(const std::string& dump_sequence_file_name){
+void Parser::dump_stat(){
+    const std::string dump_sequence_file_name=file_name+".dump.md";
     std::cout<<"Stat:"<<"frame_size is " << parse_stat.frame_size <<".\n";
     std::cout<<"Stat:"<<"block_count is " << parse_stat.block_count <<".\n";
     std::cout<<"Stat:"<<"data_blocks_size is " << parse_stat.data_blocks_size <<".\n";
@@ -266,9 +278,9 @@ void Parser::dump_stat(const std::string& dump_sequence_file_name){
     for(auto& sequence:parse_stat.sequence_infos){
         dump_sequence_file<<sequence.sequence_str;
         if(sequence.ref.valid){
-            dump_sequence_file<<"<span style=\"color:red;\">";
+            if(sequence.ref.is_diff) dump_sequence_file<<"<span style=\"color:red;\">";
             dump_sequence_file<<sequence.ref.str;
-            dump_sequence_file<<"</span>";
+            if(sequence.ref.is_diff) dump_sequence_file<<"</span>";
         }
     }
     std::cout<<"Stat: [OK] Dump sorted sequence infos into file: "<< dump_sequence_file_name << " .\n";

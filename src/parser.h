@@ -38,6 +38,7 @@ struct Reference{
     std::string str;
     uint32_t bitsize;
     bool valid;
+    bool is_diff;// extern attribute.
     Reference();
 };
 
@@ -56,17 +57,20 @@ class Parser{
 private:
     FileData file_data;
     struct {
-        int frame_size;
-        int data_blocks_size;
-        int block_count;
-        int sequence_count;
+        int frame_size = 0;
+        int data_blocks_size = 0;
+        int block_count = 0;
+        int sequence_count = 0;
         std::vector<SequenceInfo> sequence_infos;
     } parse_stat;
+    std::string file_name;
     std::string restore_data(const std::string& , uint16_t , int );
     std::string restore_data_overlap(const std::string& , uint16_t , int );
 public:
+    Parser();
     ~Parser();
-    void parse_and_decompress(const std::string& dep_file_name);
+    void parse_and_decompress();
     void init(const std::string& file_name);
-    void dump_stat(const std::string&);
+    void dump_stat();
+    std::vector<SequenceInfo>* get_seqinfo_ptr();
 };  
