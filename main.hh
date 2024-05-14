@@ -32,16 +32,16 @@ struct FileData{
     void clear();
 };
 
-struct TokenInfo{
+struct SequenceInfo{
     bool is_valid;
     bool is_compressed;
     uint64_t actual_size;
     uint64_t origin_size;
     uint64_t ref_offeset;
     uint64_t ref_length;
-    std::string token_str;
-    TokenInfo();
-    bool operator<(const TokenInfo&)const;
+    std::string sequence_str;
+    SequenceInfo();
+    bool operator<(const SequenceInfo&)const;
 };
 
 class Parser{
@@ -51,8 +51,8 @@ private:
         int frame_size;
         int data_blocks_size;
         int block_count;
-        int token_count;
-        std::vector<TokenInfo> token_infos;
+        int sequence_count;
+        std::vector<SequenceInfo> sequence_infos;
     } parse_stat;
     std::string restore_data(const std::string& , uint16_t , int );
     std::string restore_data_overlap(const std::string& , uint16_t , int );

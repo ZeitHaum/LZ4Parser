@@ -33,8 +33,8 @@ void Parser::init(const std::string& file_name){
     std::cout<<"INFO:" << "init input files, read data Bytes:" << file_data.size << "\n";
 }
 
-TokenInfo::TokenInfo(){
-    memset(this, 0, sizeof(TokenInfo));
+SequenceInfo::SequenceInfo(){
+    memset(this, 0, sizeof(SequenceInfo));
 }
 
 std::string Parser::restore_data_overlap(const std::string& origin_str, uint16_t offset, int match_length){
@@ -100,9 +100,9 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
     */
     std::string dep_block_str;
     uint8_t* begin_block_ptr = nullptr;
-    uint8_t* begin_token_ptr = nullptr;
+    uint8_t* begin_sequence_ptr = nullptr;
     uint32_t block_size = 0;
-    auto parse_token = [&](){
+    auto parse_sequence = [&](){
         //get literals length
         get_byteD(token);
         uint8_t prev_literals_length = get_high_nibble(token);
@@ -125,13 +125,13 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         //get offset
         //If is last token, have no offset.
         if(scan_ptr-begin_block_ptr==block_size){
-            TokenInfo token_info;
-            token_info.actual_size=scan_ptr-begin_token_ptr;
-            token_info.origin_size=literals.length();
-            token_info.is_compressed=false;
-            token_info.is_valid=true;
-            token_info.token_str=literals;
-            parse_stat.token_infos.push_back(token_info);
+            SequenceInfo sequence_info;
+            sequence_info.actual_size=scan_ptr-begin_sequence_ptr;
+            sequence_info.origin_size=literals.length();
+            sequence_info.is_compressed=false;
+            sequence_info.is_valid=true;
+            sequence_info.sequence_str=literals;
+            parse_stat.sequence_infos.push_back(sequence_info);
             return;
         }
         get_uInt16D(offset);
@@ -151,17 +151,17 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
         log_parsed(total_match_length);
         std::string comp_str =  restore_data(dep_block_str, offset, total_match_length);
         dep_block_str+=comp_str;
-        std::string dep_token_str=literals+comp_str;
-        TokenInfo token_info;
-        token_info.actual_size=scan_ptr-begin_token_ptr;
-        token_info.is_compressed=true;
-        token_info.origin_size=dep_token_str.length();
-        token_info.is_valid=true;
-        token_info.ref_length=total_match_length;
-        token_info.ref_offeset=offset;
-        token_info.token_str=dep_token_str;
-        parse_stat.token_infos.push_back(token_info);
-        log_parsed(dep_token_str);
+        std::string dep_sequence_str=literals+comp_str;
+        SequenceInfo sequence_info;
+        sequence_info.actual_size=scan_ptr-begin_sequence_ptr;
+        sequence_info.is_compressed=true;
+        sequence_info.origin_size=dep_sequence_str.length();
+        sequence_info.is_valid=true;
+        sequence_info.ref_length=total_match_length;
+        sequence_info.ref_offeset=offset;
+        sequence_info.sequence_str=dep_sequence_str;
+        parse_stat.sequence_infos.push_back(sequence_info);
+        log_parsed(dep_sequence_str);
     };
     while(1){
         //clear
@@ -194,23 +194,23 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
                 get_byteD(tmp_byte);
                 dep_block_str.push_back((char)tmp_byte);
             }
-            TokenInfo token_info;
-            token_info.is_compressed = false;
-            token_info.origin_size=block_size;
-            token_info.is_valid = true;
-            token_info.actual_size=4+block_size;
-            token_info.token_str=dep_block_str;
-            parse_stat.token_infos.push_back(token_info);
+            SequenceInfo sequence_info;
+            sequence_info.is_compressed = false;
+            sequence_info.origin_size=block_size;
+            sequence_info.is_valid = true;
+            sequence_info.actual_size=4+block_size;
+            sequence_info.sequence_str=dep_block_str;
+            parse_stat.sequence_infos.push_back(sequence_info);
             log_parsed(dep_block_str);
             dep_file<<dep_block_str;
         }
         else{
-            //parse tokens.
+            //parse sequences.
             while(1){
-                begin_token_ptr = scan_ptr;
-                parse_token();
-                log_parse_ok("One Token");
-                ++parse_stat.token_count;
+                begin_sequence_ptr = scan_ptr;
+                parse_sequence();
+                log_parse_ok("One Sequence.");
+                ++parse_stat.sequence_count;
                 if(scan_ptr-begin_block_ptr==block_size)break;
                 //limited scan area, assert if segmetation fault.
                 assert(scan_ptr-begin_block_ptr<=block_size);
@@ -236,46 +236,46 @@ void Parser::parse_and_decompress(const std::string& dep_file_name){
     log_parse_ok("Parse Succeccfully ended");
 }
 
-bool TokenInfo::operator<(const TokenInfo& other)const{
-    return token_str<other.token_str;
+bool SequenceInfo::operator<(const SequenceInfo& other)const{
+    return sequence_str<other.sequence_str;
 }
 
-void Parser::dump_stat(const std::string& dump_token_file_name){
+void Parser::dump_stat(const std::string& dump_sequence_file_name){
     std::cout<<"Stat:"<<"frame_size is " << parse_stat.frame_size <<".\n";
     std::cout<<"Stat:"<<"block_count is " << parse_stat.block_count <<".\n";
     std::cout<<"Stat:"<<"data_blocks_size is " << parse_stat.data_blocks_size <<".\n";
-    std::cout<<"Stat:"<<"token_count is " << parse_stat.token_count <<".\n";
-    //Dump token infos.
+    std::cout<<"Stat:"<<"sequence_count is " << parse_stat.sequence_count <<".\n";
+    //Dump sequence infos.
     //Check valid
-    assert(parse_stat.token_count==parse_stat.token_infos.size());
-    uint64_t total_token_sz = 0;
-    for(auto& token: parse_stat.token_infos){
-        assert(token.is_valid);
-        total_token_sz+=token.actual_size;
+    assert(parse_stat.sequence_count==parse_stat.sequence_infos.size());
+    uint64_t total_sequence_sz = 0;
+    for(auto& sequence: parse_stat.sequence_infos){
+        assert(sequence.is_valid);
+        total_sequence_sz+=sequence.actual_size;
     }
-    std::cout<<"Stat:"<<"total_token_sz is " << total_token_sz <<".\n";
-    std::cout<<"Stat: [OK] Check TokenInfos.\n";
-    //dump token_infos.
-    // sort(parse_stat.token_infos.begin(), parse_stat.token_infos.end());
-    std::ofstream dump_token_file = std::ofstream(dump_token_file_name);
-    int token_cnt = 0;
-    for(auto& token:parse_stat.token_infos){
-        dump_token_file<<"$Token"<<token_cnt++<<": ";
-        dump_token_file<<token.token_str.substr(0,token.token_str.length()-token.ref_length);
-        dump_token_file<<"@";
-        dump_token_file<<token.token_str.substr(token.token_str.length()-token.ref_length,token.ref_length)<<"\n";
+    std::cout<<"Stat:"<<"total_sequence_sz is " << total_sequence_sz <<".\n";
+    std::cout<<"Stat: [OK] Check sequenceInfos.\n";
+    //dump sequence_infos.
+    // sort(parse_stat.sequence_infos.begin(), parse_stat.sequence_infos.end());
+    std::ofstream dump_sequence_file = std::ofstream(dump_sequence_file_name);
+    int sequence_cnt = 0;
+    for(auto& sequence:parse_stat.sequence_infos){
+        dump_sequence_file<<"$sequence"<<sequence_cnt++<<": ";
+        dump_sequence_file<<sequence.sequence_str.substr(0,sequence.sequence_str.length()-sequence.ref_length);
+        dump_sequence_file<<"@";
+        dump_sequence_file<<sequence.sequence_str.substr(sequence.sequence_str.length()-sequence.ref_length,sequence.ref_length)<<"\n";
     }
-    std::cout<<"Stat: [OK] Dump sorted token infos into file: "<< dump_token_file_name << " .\n";
-    dump_token_file.close();
+    std::cout<<"Stat: [OK] Dump sorted sequence infos into file: "<< dump_sequence_file_name << " .\n";
+    dump_sequence_file.close();
 }
 
 int main(){
-    const std::string file_name = "lineitem.csv.lz4";
+    const std::string file_name = "lineitem_50X2.csv.lz4";
     const std::string dep_file_name = file_name+".dep";
-    const std::string dump_token_file_name=file_name+".tokens";
+    const std::string dump_sequence_file_name=file_name+".sequences";
     Parser parser;
     parser.init(file_name);
     parser.parse_and_decompress(dep_file_name);
-    parser.dump_stat(dump_token_file_name);
+    parser.dump_stat(dump_sequence_file_name);
     return 0;
 }
