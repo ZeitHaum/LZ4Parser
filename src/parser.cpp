@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "test.h"
 
 void FileData::clear(){
     delete[] data_ptr;
@@ -56,6 +57,10 @@ std::string Parser::restore_data_overlap(const std::string& origin_str, uint16_t
     return ret;
 }
 
+std::string SequenceInfo::get_full_str(){
+    return sequence_str + ref.str;
+}
+
 std::string Parser::restore_data(const std::string& origin_str, uint16_t offset, int match_length){
     //check
     assert(offset<=origin_str.length());
@@ -64,13 +69,8 @@ std::string Parser::restore_data(const std::string& origin_str, uint16_t offset,
         return sub_str;
     }
     else{
-        //重叠匹配
-        // -------Testing overlap------
-        // std::string test_str = "1";
-        // assert(restore_data_overlap(test_str, 1, 8)=="11111111");
-        // test_str = "124";
-        // assert(restore_data_overlap(test_str, 2, 4)=="2424");
-        // -------Testing overlap End------
+        /** Test restore overlap. **/
+        TEST_restore_data_overlap()
         return restore_data_overlap(origin_str, offset, match_length);
     }
 }
@@ -218,6 +218,7 @@ void Parser::parse_and_decompress(){
             parse_stat.sequence_infos.push_back(sequence_info);
             log_parsed(dep_block_str);
             dep_file<<dep_block_str;
+            parse_stat.origin_size+= dep_block_str.size();
         }
         else{
             //parse sequences.
@@ -232,6 +233,7 @@ void Parser::parse_and_decompress(){
             }
         }
         dep_file<< dep_block_str;
+        parse_stat.origin_size+= dep_block_str.size();
         if(testbit_byte(flag, 4)){
             get_uInt32D(block_checksum);
             log_parsed(block_checksum);
@@ -255,12 +257,31 @@ bool SequenceInfo::operator<(const SequenceInfo& other)const{
     return sequence_str<other.sequence_str;
 }
 
+int Parser::get_diff_size(){
+    int ret = 0;
+    for(auto& seq: parse_stat.sequence_infos){
+        if(seq.ref.valid && seq.ref.is_diff){
+            ret += seq.ref.bitsize;
+        }
+    }
+    return ret;
+}
+
+int Parser::get_origin_size(){
+    return parse_stat.origin_size;
+}
+
+int Parser::get_file_size(){
+    return file_data.size;
+}
+
 void Parser::dump_stat(){
     const std::string dump_sequence_file_name=file_name+".dump.md";
     std::cout<<"Stat:"<<"frame_size is " << parse_stat.frame_size <<".\n";
     std::cout<<"Stat:"<<"block_count is " << parse_stat.block_count <<".\n";
     std::cout<<"Stat:"<<"data_blocks_size is " << parse_stat.data_blocks_size <<".\n";
     std::cout<<"Stat:"<<"sequence_count is " << parse_stat.sequence_count <<".\n";
+    std::cout<<"Stat:"<<"origin_size is " << parse_stat.origin_size <<".\n";
     //Dump sequence infos.
     //Check valid
     assert(parse_stat.sequence_count==parse_stat.sequence_infos.size());
@@ -279,7 +300,13 @@ void Parser::dump_stat(){
         dump_sequence_file<<sequence.sequence_str;
         if(sequence.ref.valid){
             if(sequence.ref.is_diff) dump_sequence_file<<"<span style=\"color:red;\">";
-            dump_sequence_file<<sequence.ref.str;
+            std::string out_str = "";
+            for(char c: sequence.ref.str){
+                if(c=='\n' && sequence.ref.is_diff) out_str+="</span>";
+                out_str.push_back(c);
+                if(c=='\n' && sequence.ref.is_diff) out_str+= "<span style=\"color:red;\">";
+            }
+            dump_sequence_file<<out_str;
             if(sequence.ref.is_diff) dump_sequence_file<<"</span>";
         }
     }

@@ -5,6 +5,8 @@
 #include <cassert>
 #include <cstring>
 #include <algorithm>
+#include "config.h"
+#include "test.h"
 
 //define region
 #define get_byte(var) uint8_t var=*(scan_ptr);++scan_ptr
@@ -22,8 +24,13 @@
 #define testbit_byte(byte, i) ((byte>>i)&0x01)
 #define get_high_nibble(byte) ((byte>>4)&0x0F)
 #define get_low_nibble(byte) (byte&0x0F)
-#define log_parsed(var)  std::cout<<"INFO:"<<"Parsed variable "#var" "<<var<<".\n"
-#define log_parse_ok(str) std::cout<<"INFO: [OK] "<<"Parsed "<<str<<".\n";
+#ifdef ENABLE_PARSE_LOG
+    #define log_parsed(var)  std::cout<<"INFO:"<<"Parsed variable "#var" "<<var<<".\n"
+    #define log_parse_ok(str) std::cout<<"INFO: [OK] "<<"Parsed "<<str<<".\n";
+#else 
+    #define log_parsed(var)
+    #define log_parse_ok(str)
+#endif
 
 struct FileData{
     uint8_t* data_ptr = nullptr;
@@ -51,6 +58,7 @@ struct SequenceInfo{
     std::string sequence_str;
     SequenceInfo();
     bool operator<(const SequenceInfo&)const;
+    std::string get_full_str();
 };
 
 class Parser{
@@ -62,6 +70,7 @@ private:
         int block_count = 0;
         int sequence_count = 0;
         std::vector<SequenceInfo> sequence_infos;
+        int origin_size = 0;
     } parse_stat;
     std::string file_name;
     std::string restore_data(const std::string& , uint16_t , int );
@@ -73,4 +82,7 @@ public:
     void init(const std::string& file_name);
     void dump_stat();
     std::vector<SequenceInfo>* get_seqinfo_ptr();
+    int get_origin_size();
+    int get_diff_size();
+    int get_file_size();
 };  
