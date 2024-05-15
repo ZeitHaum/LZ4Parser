@@ -5,6 +5,7 @@
 struct LineInfo{
     std::vector<SequenceInfo*> seqs;
     std::string str;
+    double actual_size;
     LineInfo();
     void clear();
 };

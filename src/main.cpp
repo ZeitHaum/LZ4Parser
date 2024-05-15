@@ -23,8 +23,12 @@ void get_line_infos(std::vector<SequenceInfo>* seqs, std::vector<LineInfo>& line
         std::string now_str = seq.sequence_str+seq.ref.str;
         now_line.seqs.push_back(&seq);
         for(int i = 0; i<now_str.size(); ++i){
+            //update
             char c = now_str[i];
             now_line.str.push_back(c);
+            if(i<seq.sequence_str.size()) now_line.actual_size+=1.0F;
+            else now_line.actual_size += seq.ref.bitsize /(8.0F*seq.ref.str.size());
+            //transfor
             if(c=='\n' || c==EOF){
                 //line_end.
                 line_info.push_back(now_line);
@@ -133,6 +137,57 @@ void diff_reference(std::vector<SequenceInfo>* refs1, std::vector<SequenceInfo>*
             }
         }
     }
+
+    //逐行分析
+    std::vector<LineInfo> lines1;
+    std::vector<LineInfo> lines2;
+    get_line_infos(refs1, lines1);
+    get_line_infos(refs2, lines2);
+    int line_count = 0;
+    double line1_accum = 0.0;
+    double line2_accum = 0.0;
+    struct DiffSat{
+        double line1_size;
+        double line2_size;
+        double accum1_size;
+        double accum2_size;
+    };
+
+    std::vector<DiffSat> diff_stats;
+    
+    for(auto& line1: lines1){
+        for(auto& line2: lines2){
+            if(line1.str == line2.str){
+                ++line_count;
+                line1_accum += line1.actual_size;
+                line2_accum += line2.actual_size;
+                std::cout <<"Line "<<line_count<<" Matched. Occupied space(Bytes):" << line1.actual_size <<";" << line2.actual_size << ", total size(Bytes) "<<line1_accum <<";"<<line2_accum<<".\n"; 
+                diff_stats.push_back({line1.actual_size, line2.actual_size, line1_accum, line2_accum});
+                break;
+            }
+        }
+    }
+
+    //Out
+    std::string line1_size_str = "\"line1_size\":[";
+    std::string line2_size_str = "\"line2_size\":[";
+    std::string accum1_size_str = "\"accum1_size\":[";
+    std::string accum2_size_str = "\"accum2_size\":[";
+    for(auto& stat:diff_stats){
+        line1_size_str+= std::to_string(stat.line1_size) + ", ";
+        line2_size_str+= std::to_string(stat.line2_size) + ", ";
+        accum1_size_str+= std::to_string(stat.accum1_size) + ", ";
+        accum2_size_str+= std::to_string(stat.accum2_size) + ", ";
+    }
+    line1_size_str += "]";
+    line2_size_str += "]";
+    accum1_size_str += "]";
+    accum2_size_str += "]";
+    std::cout << line1_size_str << ",\n";
+    std::cout << line2_size_str << ",\n";
+    std::cout << accum1_size_str << ",\n";
+    std::cout << accum2_size_str << ",\n";
+
 }
 
 int main(){

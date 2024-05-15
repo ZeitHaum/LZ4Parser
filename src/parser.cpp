@@ -307,7 +307,7 @@ void Parser::dump_stat(){
                 if(c=='\n' && sequence.ref.is_diff) out_str+= "<span style=\"color:red;\">";
             }
             dump_sequence_file<<out_str;
-            if(sequence.ref.is_diff) dump_sequence_file<<"</span>";
+            if(sequence.ref.is_diff) dump_sequence_file<<"${"<<sequence.ref.offset<<","<<sequence.ref.length<<"}$"<<"</span>";
         }
     }
     std::cout<<"Stat: [OK] Dump sorted sequence infos into file: "<< dump_sequence_file_name << " .\n";
