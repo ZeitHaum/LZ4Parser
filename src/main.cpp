@@ -26,8 +26,15 @@ void get_line_infos(std::vector<SequenceInfo>* seqs, std::vector<LineInfo>& line
             //update
             char c = now_str[i];
             now_line.str.push_back(c);
-            if(i<seq.sequence_str.size()) now_line.actual_size+=1.0F;
-            else now_line.actual_size += seq.ref.bitsize /(8.0F*seq.ref.str.size());
+            if(i<seq.sequence_str.size()) {
+                now_line.actual_size+=1.0F;
+            }
+            else {
+                double comp_size = seq.ref.bitsize /(8.0F*seq.ref.str.size());
+                now_line.compressed_bytes+=1.0F;
+                now_line.actual_size += comp_size;
+                now_line.ref_size += comp_size;
+            }
             //transfor
             if(c=='\n' || c==EOF){
                 //line_end.
@@ -109,6 +116,49 @@ void sign_matched_line(LineInfo& line1, LineInfo& line2){
     }
 }
 
+void dump_double_vector(std::vector<double>& vec){
+    std::string out = "[";
+    for(double& d: vec){
+        out += std::to_string(d);
+        out += " ,";
+    }
+    std::cout<< out << "]\n";
+}
+
+void dump_line_infos(std::vector<SequenceInfo>* refs){
+    //逐行分析
+    std::vector<LineInfo> lines;
+    get_line_infos(refs, lines);
+    int line_count = 0;
+    struct {
+        std::vector<double> origin_size;
+        std::vector<double> line_size;
+        std::vector<double> accum_size;
+        std::vector<double> compressed_bytes;
+        std::vector<double> ref_size;
+        void dump_all(){
+            dump_double_vector(origin_size);
+            dump_double_vector(line_size);
+            dump_double_vector(accum_size);
+            dump_double_vector(compressed_bytes);
+            dump_double_vector(ref_size);
+        }
+    } diff_sat;
+
+    #define add_accum(val, vec) if(vec.empty()){vec.push_back(val);}else{vec.push_back(vec.back()+val);}
+
+    for(auto& line: lines){
+        diff_sat.line_size.push_back(line.actual_size);
+        add_accum(((double)line.str.size()), diff_sat.origin_size);
+        add_accum(line.actual_size, diff_sat.accum_size);
+        add_accum(line.compressed_bytes, diff_sat.compressed_bytes);
+        add_accum(line.ref_size, diff_sat.ref_size);
+    }
+
+    diff_sat.dump_all();
+    std::cout << "--------End line infos--------\n";
+}
+
 void diff_reference(std::vector<SequenceInfo>* refs1, std::vector<SequenceInfo>*refs2){
     std::map<SequenceInfo, int> seq_mp;
     for(auto& seq:(*refs1)){
@@ -137,67 +187,18 @@ void diff_reference(std::vector<SequenceInfo>* refs1, std::vector<SequenceInfo>*
             }
         }
     }
-
-    //逐行分析
-    std::vector<LineInfo> lines1;
-    std::vector<LineInfo> lines2;
-    get_line_infos(refs1, lines1);
-    get_line_infos(refs2, lines2);
-    int line_count = 0;
-    double line1_accum = 0.0;
-    double line2_accum = 0.0;
-    struct DiffSat{
-        double line1_size;
-        double line2_size;
-        double accum1_size;
-        double accum2_size;
-    };
-
-    std::vector<DiffSat> diff_stats;
-    
-    for(auto& line1: lines1){
-        for(auto& line2: lines2){
-            if(line1.str == line2.str){
-                ++line_count;
-                line1_accum += line1.actual_size;
-                line2_accum += line2.actual_size;
-                std::cout <<"Line "<<line_count<<" Matched. Occupied space(Bytes):" << line1.actual_size <<";" << line2.actual_size << ", total size(Bytes) "<<line1_accum <<";"<<line2_accum<<".\n"; 
-                diff_stats.push_back({line1.actual_size, line2.actual_size, line1_accum, line2_accum});
-                break;
-            }
-        }
-    }
-
-    //Out
-    std::string line1_size_str = "\"line1_size\":[";
-    std::string line2_size_str = "\"line2_size\":[";
-    std::string accum1_size_str = "\"accum1_size\":[";
-    std::string accum2_size_str = "\"accum2_size\":[";
-    for(auto& stat:diff_stats){
-        line1_size_str+= std::to_string(stat.line1_size) + ", ";
-        line2_size_str+= std::to_string(stat.line2_size) + ", ";
-        accum1_size_str+= std::to_string(stat.accum1_size) + ", ";
-        accum2_size_str+= std::to_string(stat.accum2_size) + ", ";
-    }
-    line1_size_str += "]";
-    line2_size_str += "]";
-    accum1_size_str += "]";
-    accum2_size_str += "]";
-    std::cout << line1_size_str << ",\n";
-    std::cout << line2_size_str << ",\n";
-    std::cout << accum1_size_str << ",\n";
-    std::cout << accum2_size_str << ",\n";
-
 }
 
 int main(){
-    const std::string highcomp_file_name = "../test/lineitem_50X10.csv.lz4";
-    const std::string lowcomp_file_name = "../test/lineitem_50X2.csv.lz4";
+    const std::string highcomp_file_name = "../test/lineitemX3.csv.lz4";
+    const std::string lowcomp_file_name = "../test/lineitemX1.csv.lz4";
     Parser* parser_low = parse_file(lowcomp_file_name);
     Parser* parser_high = parse_file(highcomp_file_name);
     diff_reference(parser_low->get_seqinfo_ptr(), parser_high->get_seqinfo_ptr());
-    std::cout<<"Diff: space of parser_low is "<< parser_low->get_diff_size() *1.0F/8.0F<< "Bytes. \n"; 
-    std::cout<<"Diff: space of parser_high is "<< parser_high->get_diff_size() *1.0F/8.0F<<"Bytes. \n"; 
+    // dump_line_infos(parser_low->get_seqinfo_ptr());
+    // dump_line_infos(parser_high->get_seqinfo_ptr());
+    parser_low->dump_diff_size();
+    parser_high->dump_diff_size();
     parser_low->dump_stat();
     parser_high->dump_stat();
     delete parser_low;

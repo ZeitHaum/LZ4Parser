@@ -83,6 +83,6 @@ public:
     void dump_stat();
     std::vector<SequenceInfo>* get_seqinfo_ptr();
     int get_origin_size();
-    int get_diff_size();
+    void dump_diff_size();
     int get_file_size();
 };  

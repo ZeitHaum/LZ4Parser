@@ -257,14 +257,22 @@ bool SequenceInfo::operator<(const SequenceInfo& other)const{
     return ref.str<other.ref.str;
 }
 
-int Parser::get_diff_size(){
-    int ret = 0;
+void Parser::dump_diff_size(){
+    struct{
+        uint64_t diff_bitsize;
+        uint64_t diff_ref_originsize;
+        uint64_t diff_total_size;
+    } ret;
     for(auto& seq: parse_stat.sequence_infos){
         if(seq.ref.valid && seq.ref.is_diff){
-            ret += seq.ref.bitsize;
+            ret.diff_bitsize += seq.ref.bitsize;
+            ret.diff_ref_originsize += seq.ref.str.size();
         }
+        ret.diff_total_size+= seq.actual_size;
     }
-    return ret;
+    std::cout<<"Diff: ref_bitsize"<< ret.diff_bitsize << "\n.";
+    std::cout<<"Diff: ref_bitsize"<< ret.diff_ref_originsize << "\n.";
+    std::cout<<"Diff: ref_bitsize"<< ret.diff_total_size << "\n.";
 }
 
 int Parser::get_origin_size(){
@@ -294,22 +302,26 @@ void Parser::dump_stat(){
     std::cout<<"Stat: [OK] Check sequenceInfos.\n";
     //dump sequence_infos.
     // sort(parse_stat.sequence_infos.begin(), parse_stat.sequence_infos.end());
-    std::ofstream dump_sequence_file = std::ofstream(dump_sequence_file_name);
-    int sequence_cnt = 0;
-    for(auto& sequence:parse_stat.sequence_infos){
-        dump_sequence_file<<sequence.sequence_str;
-        if(sequence.ref.valid){
-            if(sequence.ref.is_diff) dump_sequence_file<<"<span style=\"color:red;\">";
-            std::string out_str = "";
-            for(char c: sequence.ref.str){
-                if(c=='\n' && sequence.ref.is_diff) out_str+="</span>";
-                out_str.push_back(c);
-                if(c=='\n' && sequence.ref.is_diff) out_str+= "<span style=\"color:red;\">";
+    #ifdef ENABLE_DUMP_SEQUENCE
+        std::ofstream dump_sequence_file = std::ofstream(dump_sequence_file_name);
+        int sequence_cnt = 0;
+        for(auto& sequence:parse_stat.sequence_infos){
+            dump_sequence_file<<sequence.sequence_str;
+            std::string color_head = "<span style=\"color:green;\">";
+            if(sequence.ref.is_diff) color_head = "<span style=\"color:red;\">";
+            if(sequence.ref.valid){
+                dump_sequence_file<<color_head;
+                std::string out_str = "";
+                for(char c: sequence.ref.str){
+                    if(c=='\n') out_str+="</span>";
+                    out_str.push_back(c);
+                    if(c=='\n') out_str+= color_head;
+                }
+                dump_sequence_file<<out_str;
+                dump_sequence_file<<"${"<<sequence.ref.offset<<","<<sequence.ref.length<<"}$"<<"</span>";
             }
-            dump_sequence_file<<out_str;
-            if(sequence.ref.is_diff) dump_sequence_file<<"${"<<sequence.ref.offset<<","<<sequence.ref.length<<"}$"<<"</span>";
         }
-    }
-    std::cout<<"Stat: [OK] Dump sorted sequence infos into file: "<< dump_sequence_file_name << " .\n";
-    dump_sequence_file.close();
+        std::cout<<"Stat: [OK] Dump sorted sequence infos into file: "<< dump_sequence_file_name << " .\n";
+        dump_sequence_file.close();
+    #endif
 }
