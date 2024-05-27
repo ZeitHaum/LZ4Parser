@@ -190,8 +190,8 @@ void diff_reference(std::vector<SequenceInfo>* refs1, std::vector<SequenceInfo>*
 }
 
 int main(){
-    const std::string highcomp_file_name = "../test/lineitemX3.csv.lz4";
-    const std::string lowcomp_file_name = "../test/lineitemX1.csv.lz4";
+    const std::string lowcomp_file_name = "../test/test2.csv.lz4";
+    const std::string highcomp_file_name = "../test/test1.csv.lz4";
     Parser* parser_low = parse_file(lowcomp_file_name);
     Parser* parser_high = parse_file(highcomp_file_name);
     diff_reference(parser_low->get_seqinfo_ptr(), parser_high->get_seqinfo_ptr());

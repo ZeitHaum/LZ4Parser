@@ -216,6 +216,7 @@ void Parser::parse_and_decompress(){
             sequence_info.actual_size=4+block_size;
             sequence_info.sequence_str=dep_block_str;
             parse_stat.sequence_infos.push_back(sequence_info);
+            ++parse_stat.sequence_count;
             log_parsed(dep_block_str);
             dep_file<<dep_block_str;
             parse_stat.origin_size+= dep_block_str.size();
@@ -259,20 +260,30 @@ bool SequenceInfo::operator<(const SequenceInfo& other)const{
 
 void Parser::dump_diff_size(){
     struct{
+        uint64_t diff_count;
         uint64_t diff_bitsize;
         uint64_t diff_ref_originsize;
-        uint64_t diff_total_size;
+        uint64_t diff_literal_size;
+        uint64_t diff_literal_size_encode_size;
     } ret;
+    memset(&ret, 0, sizeof(ret));
     for(auto& seq: parse_stat.sequence_infos){
         if(seq.ref.valid && seq.ref.is_diff){
+            ret.diff_count+= 1;
             ret.diff_bitsize += seq.ref.bitsize;
             ret.diff_ref_originsize += seq.ref.str.size();
         }
-        ret.diff_total_size+= seq.actual_size;
+        ret.diff_literal_size += seq.sequence_str.size();
+        ret.diff_literal_size_encode_size += 8*(seq.actual_size - seq.sequence_str.size());
+        if(seq.ref.valid){
+            ret.diff_literal_size_encode_size -= seq.ref.bitsize;
+        }
     }
-    std::cout<<"Diff: ref_bitsize"<< ret.diff_bitsize << "\n.";
-    std::cout<<"Diff: ref_bitsize"<< ret.diff_ref_originsize << "\n.";
-    std::cout<<"Diff: ref_bitsize"<< ret.diff_total_size << "\n.";
+    std::cout<<"Diff: diff_count "<< ret.diff_count << ".\n";
+    std::cout<<std::setprecision(20)<<"Diff: ref_bitsize "<< ret.diff_bitsize * 1.0F/8.0F<< ".\n";
+    std::cout<<"Diff: diff_ref_originsize "<< ret.diff_ref_originsize << ".\n";
+    std::cout<<"Diff: diff_literal_size "<< ret.diff_literal_size << ".\n";
+    std::cout<<std::setprecision(20)<<"Diff: diff_literal_size_encode_size "<< ret.diff_literal_size_encode_size* 1.0F/8.0F << ".\n";
 }
 
 int Parser::get_origin_size(){

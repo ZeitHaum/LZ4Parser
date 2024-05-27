@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "config.h"
 #include "test.h"
+#include <iomanip>
 
 //define region
 #define get_byte(var) uint8_t var=*(scan_ptr);++scan_ptr

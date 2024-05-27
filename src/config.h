@@ -3,6 +3,6 @@
 
 // #define ENABLE_PARSE_LOG
 // #define ENABLE_TEST
-// #define ENABLE_DUMP_SEQUENCE
+#define ENABLE_DUMP_SEQUENCE
 
 #endif
